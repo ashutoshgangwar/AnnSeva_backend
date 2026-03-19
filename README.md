@@ -42,6 +42,7 @@ src/
 - `GET /api/v1/health`
 - `POST /api/v1/halwai/onboard`
 - `GET /api/v1/halwai/:halwaiId`
+- `GET /api/v1/halwai/:halwaiId/overview`
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/incoming`
 - `GET /api/v1/orders/active`
@@ -74,6 +75,13 @@ Required fields: `halwaiName`, `shopName`, `location`, `phoneNumber`
 3. If the same record is returned, data is saved in MongoDB.
 
 If MongoDB is not connected, Halwai APIs return `503`.
+
+### Halwai overview API
+
+`GET /api/v1/halwai/:halwaiId/overview` returns:
+- `activeOrders`
+- `totalGuestsServed`
+- `totalCompletedBookings`
 
 ### Create incoming order payload
 
