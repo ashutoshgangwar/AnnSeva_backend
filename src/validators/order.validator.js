@@ -88,9 +88,13 @@ const validateOrderDecision = (req, res, next) => {
     return next(createValidationError('Decision must be accepted or rejected.'));
   }
 
-  const halwaiId = req.body.halwaiId ? sanitizeString(req.body.halwaiId) : undefined;
+  const halwaiId = sanitizeString(req.body.halwaiId);
 
-  if (halwaiId && !mongoose.isValidObjectId(halwaiId)) {
+  if (!halwaiId) {
+    return next(createValidationError('Halwai id is required.'));
+  }
+
+  if (!mongoose.isValidObjectId(halwaiId)) {
     return next(createValidationError('Halwai id must be a valid MongoDB ObjectId.'));
   }
 

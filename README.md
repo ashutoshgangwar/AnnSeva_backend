@@ -44,6 +44,7 @@ src/
 - `GET /api/v1/halwai/:halwaiId`
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/incoming`
+- `POST /api/v1/orders/:orderId/status`
 - `PATCH /api/v1/orders/:orderId/decision`
 
 ### Halwai onboarding payload
@@ -101,3 +102,5 @@ Priority values: `high`, `medium`, `low`
 ```
 
 Decision values: `accepted` or `rejected` (also supports `accept`/`reject`).
+
+`GET /api/v1/orders/incoming` only returns `pending` orders, so accepted/rejected orders are not shown there.
