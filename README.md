@@ -45,6 +45,7 @@ src/
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/incoming`
 - `GET /api/v1/orders/active`
+- `POST /api/v1/orders/complete`
 - `POST /api/v1/orders/:orderId/status`
 - `PATCH /api/v1/orders/:orderId/decision`
 
@@ -110,3 +111,14 @@ Allowed flow: `pending -> accept/reject -> reached -> completed`.
 `GET /api/v1/orders/incoming` only returns `pending` orders, so accept/reject/reached/completed orders are not shown there.
 
 `GET /api/v1/orders/active` returns active orders with: `orderId`, `customerName`, `phoneNumber`, `address`, `eventDate`, `numberOfGuests`, `daysLeft`, `selectedMenu`, and `tag` (`active`).
+
+### Mark order completed payload
+
+```json
+{
+  "orderId": "65f4a9f8c98df8f5823f1def",
+  "customerName": "Anita Sharma"
+}
+```
+
+Use `POST /api/v1/orders/complete` to mark an order as completed using only `orderId` and `customerName`.

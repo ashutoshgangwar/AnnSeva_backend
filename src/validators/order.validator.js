@@ -119,7 +119,32 @@ const validateOrderDecision = (req, res, next) => {
   return next();
 };
 
+const validateCompleteOrderByCustomer = (req, res, next) => {
+  const orderId = sanitizeString(req.body.orderId);
+  const customerName = sanitizeString(req.body.customerName);
+
+  if (!orderId) {
+    return next(createValidationError('Order id is required.'));
+  }
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    return next(createValidationError('Order id must be a valid MongoDB ObjectId.'));
+  }
+
+  if (!customerName) {
+    return next(createValidationError('Customer name is required.'));
+  }
+
+  req.body = {
+    orderId,
+    customerName,
+  };
+
+  return next();
+};
+
 module.exports = {
   validateCreateOrder,
   validateOrderDecision,
+  validateCompleteOrderByCustomer,
 };

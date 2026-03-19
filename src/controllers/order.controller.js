@@ -5,6 +5,7 @@ const {
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,
+  completeOrderByCustomer,
 } = require('../services/order.service');
 
 const createIncomingOrder = asyncHandler(async (req, res) => {
@@ -61,9 +62,26 @@ const decideIncomingOrder = asyncHandler(async (req, res) => {
   });
 });
 
+const completeOrder = asyncHandler(async (req, res) => {
+  const order = await completeOrderByCustomer(req.body);
+
+  if (!order) {
+    const error = new Error('Order not found for provided order id and customer name.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Order marked as completed successfully.',
+    data: order,
+  });
+});
+
 module.exports = {
   createIncomingOrder,
   listIncomingOrders,
   listActiveOrders,
   decideIncomingOrder,
+  completeOrder,
 };

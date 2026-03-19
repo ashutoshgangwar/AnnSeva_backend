@@ -14,6 +14,8 @@ const createOrder = async (payload) => {
   return Order.create(payload);
 };
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const calculateDaysLeft = (eventDate) => {
   const now = new Date();
   const eventDateTime = new Date(eventDate);
@@ -78,9 +80,38 @@ const respondToOrder = async (orderId, payload) => {
   return order.save();
 };
 
+const completeOrderByCustomer = async (payload) => {
+  assertDatabaseConnected();
+
+  const order = await Order.findOne({
+    _id: payload.orderId,
+    customerName: { $regex: `^${escapeRegex(payload.customerName)}$`, $options: 'i' },
+  });
+
+  if (!order) {
+    return null;
+  }
+
+  if (order.status === 'completed') {
+    const error = new Error('Order is already completed.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (order.status === 'reject') {
+    const error = new Error('Rejected order cannot be marked as completed.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  order.status = 'completed';
+  return order.save();
+};
+
 module.exports = {
   createOrder,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,
+  completeOrderByCustomer,
 };
