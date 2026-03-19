@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../models/order.model');
+const Payment = require('../models/payment.model');
 
 const assertDatabaseConnected = () => {
   if (mongoose.connection.readyState !== 1) {
@@ -21,6 +22,34 @@ const calculateDaysLeft = (eventDate) => {
   const eventDateTime = new Date(eventDate);
   const millisecondsInDay = 1000 * 60 * 60 * 24;
   return Math.ceil((eventDateTime.getTime() - now.getTime()) / millisecondsInDay);
+};
+
+const ensurePaymentForOrder = async (order) => {
+  const existingPayment = await Payment.findOne({ orderId: order._id });
+
+  if (existingPayment) {
+    return existingPayment;
+  }
+
+  return Payment.create({
+    orderId: order._id,
+    customerName: order.customerName,
+    totalBill: order.totalBill,
+  });
+};
+
+const getOrCreatePaymentForCompletedOrder = async (order) => {
+  const existingPayment = await Payment.findOne({ orderId: order._id });
+
+  if (existingPayment) {
+    return existingPayment;
+  }
+
+  if (order.status !== 'completed') {
+    return null;
+  }
+
+  return ensurePaymentForOrder(order);
 };
 
 const getIncomingOrders = async () => {
@@ -105,7 +134,86 @@ const completeOrderByCustomer = async (payload) => {
   }
 
   order.status = 'completed';
-  return order.save();
+  const updatedOrder = await order.save();
+  const payment = await ensurePaymentForOrder(updatedOrder);
+
+  return {
+    order: updatedOrder,
+    paymentId: payment._id,
+  };
+};
+
+const getOrderPaymentDetails = async (orderId) => {
+  assertDatabaseConnected();
+
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    return null;
+  }
+
+  const payment = await getOrCreatePaymentForCompletedOrder(order);
+
+  if (!payment) {
+    const error = new Error('Payment id is not generated yet. Complete the order first.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return {
+    orderId: order._id,
+    paymentId: payment._id,
+    totalBill: order.totalBill,
+    userName: order.customerName,
+    address: order.customerAddress,
+    phoneNumber: order.phoneNumber,
+    guests: order.numberOfGuests,
+    paymentStatus: payment.status,
+    menu: order.menu,
+  };
+};
+
+const markPaymentReceived = async (orderId, paymentId) => {
+  assertDatabaseConnected();
+
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    return null;
+  }
+
+  const payment = await Payment.findOne({
+    _id: paymentId,
+    orderId: order._id,
+  });
+
+  if (!payment) {
+    const error = new Error('Payment not found for provided order id and payment id.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (payment.status === 'received') {
+    const error = new Error('Payment is already marked as received.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  payment.status = 'received';
+  payment.receivedAt = new Date();
+
+  order.paymentStatus = 'received';
+  order.paymentReceivedAt = payment.receivedAt;
+
+  await order.save();
+  const updatedPayment = await payment.save();
+
+  return {
+    orderId: order._id,
+    paymentId: updatedPayment._id,
+    paymentStatus: updatedPayment.status,
+    paymentReceivedAt: updatedPayment.receivedAt,
+  };
 };
 
 module.exports = {
@@ -114,4 +222,6 @@ module.exports = {
   getActiveOrders,
   respondToOrder,
   completeOrderByCustomer,
+  getOrderPaymentDetails,
+  markPaymentReceived,
 };

@@ -46,6 +46,8 @@ src/
 - `GET /api/v1/orders/incoming`
 - `GET /api/v1/orders/active`
 - `POST /api/v1/orders/complete`
+- `GET /api/v1/orders/:orderId/payment`
+- `POST /api/v1/orders/:orderId/payment/receive`
 - `POST /api/v1/orders/:orderId/status`
 - `PATCH /api/v1/orders/:orderId/decision`
 
@@ -83,6 +85,7 @@ If MongoDB is not connected, Halwai APIs return `503`.
   "customerAddress": "Sector 45, Noida",
   "eventDate": "2026-04-15T18:30:00.000Z",
   "numberOfGuests": 180,
+  "totalBill": 75000,
   "menu": [
     { "itemName": "Paneer Butter Masala" },
     { "itemName": "Veg Biryani" },
@@ -91,7 +94,7 @@ If MongoDB is not connected, Halwai APIs return `503`.
 }
 ```
 
-Required fields: `customerName`, `phoneNumber`, `priority`, `customerAddress`, `eventDate`, `numberOfGuests`, `menu`
+Required fields: `customerName`, `phoneNumber`, `priority`, `customerAddress`, `eventDate`, `numberOfGuests`, `menu`, `totalBill`
 
 Priority values: `high`, `medium`, `low`
 
@@ -122,3 +125,23 @@ Allowed flow: `pending -> accept/reject -> reached -> completed`.
 ```
 
 Use `POST /api/v1/orders/complete` to mark an order as completed using only `orderId` and `customerName`.
+
+When order is marked `completed`, a record is created in a separate `payments` collection and `paymentId` is the payment document MongoDB `_id`.
+
+### Payment APIs
+
+- `GET /api/v1/orders/:orderId/payment` returns payment bill details:
+  `paymentId`, `totalBill`, `userName`, `address`, `phoneNumber`, `guests`, `paymentStatus`, `menu`.
+- `POST /api/v1/orders/:orderId/payment/receive` marks payment as received and returns `paymentId`.
+
+Receive payment payload:
+
+```json
+{
+  "paymentId": "69bc35c5f1de024b590e8600"
+}
+```
+
+For receive payment API, both values are required:
+- `orderId` in URL
+- `paymentId` in request body

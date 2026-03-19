@@ -53,10 +53,25 @@ const orderSchema = new mongoose.Schema(
         message: 'Menu must contain at least one item.',
       },
     },
+    totalBill: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
     status: {
       type: String,
       enum: ['pending', 'accept', 'reject', 'reached', 'completed'],
       default: 'pending',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'received'],
+      default: 'pending',
+    },
+    paymentReceivedAt: {
+      type: Date,
+      default: null,
     },
     halwaiId: {
       type: mongoose.Schema.Types.ObjectId,

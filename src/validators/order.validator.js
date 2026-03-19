@@ -38,6 +38,7 @@ const validateCreateOrder = (req, res, next) => {
   const priority = sanitizeString(req.body.priority || 'medium').toLowerCase();
   const customerAddress = sanitizeString(req.body.customerAddress);
   const numberOfGuests = Number(req.body.numberOfGuests);
+  const totalBill = Number(req.body.totalBill);
   const eventDate = new Date(req.body.eventDate);
   const menu = sanitizeMenu(req.body.menu);
 
@@ -69,6 +70,10 @@ const validateCreateOrder = (req, res, next) => {
     return next(createValidationError('Number of guests must be a positive integer.'));
   }
 
+  if (req.body.totalBill === undefined || Number.isNaN(totalBill) || totalBill < 0) {
+    return next(createValidationError('Total bill must be a non-negative number.'));
+  }
+
   if (menu.length === 0) {
     return next(createValidationError('Menu must contain at least one item name.'));
   }
@@ -80,6 +85,7 @@ const validateCreateOrder = (req, res, next) => {
     customerAddress,
     eventDate,
     numberOfGuests,
+    totalBill,
     menu,
   };
 
@@ -143,8 +149,27 @@ const validateCompleteOrderByCustomer = (req, res, next) => {
   return next();
 };
 
+const validateReceivePayment = (req, res, next) => {
+  const paymentId = sanitizeString(req.body.paymentId);
+
+  if (!paymentId) {
+    return next(createValidationError('Payment id is required.'));
+  }
+
+  if (!mongoose.isValidObjectId(paymentId)) {
+    return next(createValidationError('Payment id must be a valid MongoDB ObjectId.'));
+  }
+
+  req.body = {
+    paymentId,
+  };
+
+  return next();
+};
+
 module.exports = {
   validateCreateOrder,
   validateOrderDecision,
   validateCompleteOrderByCustomer,
+  validateReceivePayment,
 };

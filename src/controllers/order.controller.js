@@ -6,6 +6,8 @@ const {
   getActiveOrders,
   respondToOrder,
   completeOrderByCustomer,
+  getOrderPaymentDetails,
+  markPaymentReceived,
 } = require('../services/order.service');
 
 const createIncomingOrder = asyncHandler(async (req, res) => {
@@ -63,9 +65,9 @@ const decideIncomingOrder = asyncHandler(async (req, res) => {
 });
 
 const completeOrder = asyncHandler(async (req, res) => {
-  const order = await completeOrderByCustomer(req.body);
+  const result = await completeOrderByCustomer(req.body);
 
-  if (!order) {
+  if (!result) {
     const error = new Error('Order not found for provided order id and customer name.');
     error.statusCode = 404;
     throw error;
@@ -74,7 +76,58 @@ const completeOrder = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Order marked as completed successfully.',
-    data: order,
+    data: {
+      order: result.order,
+      paymentId: result.paymentId,
+    },
+  });
+});
+
+const getOrderPayment = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    const error = new Error('Order id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const paymentDetails = await getOrderPaymentDetails(orderId);
+
+  if (!paymentDetails) {
+    const error = new Error('Order not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Order payment details fetched successfully.',
+    data: paymentDetails,
+  });
+});
+
+const receiveOrderPayment = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    const error = new Error('Order id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const payment = await markPaymentReceived(orderId, req.body.paymentId);
+
+  if (!payment) {
+    const error = new Error('Order not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Payment marked as received successfully.',
+    data: payment,
   });
 });
 
@@ -84,4 +137,6 @@ module.exports = {
   listActiveOrders,
   decideIncomingOrder,
   completeOrder,
+  getOrderPayment,
+  receiveOrderPayment,
 };
