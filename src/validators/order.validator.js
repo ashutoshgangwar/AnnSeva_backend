@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const PRIORITIES = ['high', 'medium', 'low'];
-const DECISIONS = ['accepted', 'rejected'];
+const ORDER_STATUS_UPDATES = ['accept', 'reject', 'reached', 'completed'];
+const PHONE_REGEX = /^\+?[1-9]\d{9,14}$/;
 
 const createValidationError = (message) => {
   const error = new Error(message);
@@ -33,6 +34,7 @@ const sanitizeMenu = (menu) => {
 
 const validateCreateOrder = (req, res, next) => {
   const customerName = sanitizeString(req.body.customerName);
+  const phoneNumber = sanitizeString(req.body.phoneNumber);
   const priority = sanitizeString(req.body.priority || 'medium').toLowerCase();
   const customerAddress = sanitizeString(req.body.customerAddress);
   const numberOfGuests = Number(req.body.numberOfGuests);
@@ -41,6 +43,14 @@ const validateCreateOrder = (req, res, next) => {
 
   if (!customerName) {
     return next(createValidationError('Customer name is required.'));
+  }
+
+  if (!phoneNumber) {
+    return next(createValidationError('Phone number is required.'));
+  }
+
+  if (!PHONE_REGEX.test(phoneNumber)) {
+    return next(createValidationError('Phone number must be valid and include 10 to 15 digits.'));
   }
 
   if (!PRIORITIES.includes(priority)) {
@@ -65,6 +75,7 @@ const validateCreateOrder = (req, res, next) => {
 
   req.body = {
     customerName,
+    phoneNumber,
     priority,
     customerAddress,
     eventDate,
@@ -78,14 +89,16 @@ const validateCreateOrder = (req, res, next) => {
 const validateOrderDecision = (req, res, next) => {
   const decisionInput = sanitizeString(req.body.decision || req.body.status).toLowerCase();
   const normalizedDecision =
-    decisionInput === 'accept'
-      ? 'accepted'
-      : decisionInput === 'reject'
-      ? 'rejected'
+    decisionInput === 'accepted'
+      ? 'accept'
+      : decisionInput === 'rejected'
+      ? 'reject'
       : decisionInput;
 
-  if (!DECISIONS.includes(normalizedDecision)) {
-    return next(createValidationError('Decision must be accepted or rejected.'));
+  if (!ORDER_STATUS_UPDATES.includes(normalizedDecision)) {
+    return next(
+      createValidationError('Status must be one of: accept, reject, reached, completed.')
+    );
   }
 
   const halwaiId = sanitizeString(req.body.halwaiId);

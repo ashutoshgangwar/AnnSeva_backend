@@ -20,6 +20,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    phoneNumber: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     priority: {
       type: String,
       enum: ['high', 'medium', 'low'],
@@ -50,7 +55,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'rejected'],
+      enum: ['pending', 'accept', 'reject', 'reached', 'completed'],
       default: 'pending',
     },
     halwaiId: {

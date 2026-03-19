@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const asyncHandler = require('../utils/asyncHandler');
-const { createOrder, getIncomingOrders, respondToOrder } = require('../services/order.service');
+const {
+  createOrder,
+  getIncomingOrders,
+  getActiveOrders,
+  respondToOrder,
+} = require('../services/order.service');
 
 const createIncomingOrder = asyncHandler(async (req, res) => {
   const order = await createOrder(req.body);
@@ -18,6 +23,16 @@ const listIncomingOrders = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Incoming orders fetched successfully.',
+    data: orders,
+  });
+});
+
+const listActiveOrders = asyncHandler(async (req, res) => {
+  const orders = await getActiveOrders();
+
+  res.status(200).json({
+    success: true,
+    message: 'Active orders fetched successfully.',
     data: orders,
   });
 });
@@ -49,5 +64,6 @@ const decideIncomingOrder = asyncHandler(async (req, res) => {
 module.exports = {
   createIncomingOrder,
   listIncomingOrders,
+  listActiveOrders,
   decideIncomingOrder,
 };

@@ -44,6 +44,7 @@ src/
 - `GET /api/v1/halwai/:halwaiId`
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/incoming`
+- `GET /api/v1/orders/active`
 - `POST /api/v1/orders/:orderId/status`
 - `PATCH /api/v1/orders/:orderId/decision`
 
@@ -76,6 +77,7 @@ If MongoDB is not connected, Halwai APIs return `503`.
 ```json
 {
   "customerName": "Anita Sharma",
+  "phoneNumber": "+919876543210",
   "priority": "high",
   "customerAddress": "Sector 45, Noida",
   "eventDate": "2026-04-15T18:30:00.000Z",
@@ -88,7 +90,7 @@ If MongoDB is not connected, Halwai APIs return `503`.
 }
 ```
 
-Required fields: `customerName`, `priority`, `customerAddress`, `eventDate`, `numberOfGuests`, `menu`
+Required fields: `customerName`, `phoneNumber`, `priority`, `customerAddress`, `eventDate`, `numberOfGuests`, `menu`
 
 Priority values: `high`, `medium`, `low`
 
@@ -101,6 +103,10 @@ Priority values: `high`, `medium`, `low`
 }
 ```
 
-Decision values: `accepted` or `rejected` (also supports `accept`/`reject`).
+Status update values: `accept`, `reject`, `reached`, `completed`.
 
-`GET /api/v1/orders/incoming` only returns `pending` orders, so accepted/rejected orders are not shown there.
+Allowed flow: `pending -> accept/reject -> reached -> completed`.
+
+`GET /api/v1/orders/incoming` only returns `pending` orders, so accept/reject/reached/completed orders are not shown there.
+
+`GET /api/v1/orders/active` returns active orders with: `orderId`, `customerName`, `phoneNumber`, `address`, `eventDate`, `numberOfGuests`, `daysLeft`, `selectedMenu`, and `tag` (`active`).
