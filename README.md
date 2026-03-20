@@ -41,8 +41,10 @@ src/
 
 - `GET /api/v1/health`
 - `POST /api/v1/halwai/onboard`
+- `GET /api/v1/halwai/search`
 - `GET /api/v1/halwai/:halwaiId`
 - `GET /api/v1/halwai/:halwaiId/overview`
+- `GET /api/v1/halwai/:halwaiId/reviews`
 - `POST /api/v1/customers/dummy`
 - `GET /api/v1/customers/:customerId`
 - `POST /api/v1/orders`
@@ -64,6 +66,17 @@ src/
   "shopName": "Ramesh Mithai Bhandar",
   "location": "Noida Sector 62",
   "phoneNumber": "+919876543210",
+  "foodTypes": ["veg", "sweets"],
+  "specializations": ["North Indian", "Punjabi"],
+  "yearsOfExperience": 12,
+  "locationDetails": {
+    "latitude": 28.6139,
+    "longitude": 77.209,
+    "physicalAddress": "Shop 22, Sector 62, Noida"
+  },
+  "minGuestsCapacity": 50,
+  "maxGuestsCapacity": 1000,
+  "pricePerPlate": 220,
   "alternatePhoneNumber": "+919123456789",
   "gstNumber": "07ABCDE1234F1Z5",
   "licenseNumber": "FSSAI-998877"
@@ -71,6 +84,31 @@ src/
 ```
 
 Required fields: `halwaiName`, `shopName`, `location`, `phoneNumber`
+
+Profile listing fields supported: `foodTypes`, `specializations`, `yearsOfExperience`, `locationDetails.latitude`, `locationDetails.longitude`, `locationDetails.physicalAddress`, `minGuestsCapacity`, `maxGuestsCapacity`, `pricePerPlate`
+
+### Search nearby halwais
+
+Use `GET /api/v1/halwai/search` to find nearby halwais for a customer.
+
+Required query params:
+- `latitude`
+- `longitude`
+
+Optional query params:
+- `guests`
+- `foodType`
+- `specialization`
+- `maxDistanceKm`
+- `limit`
+
+Example:
+
+```bash
+curl "http://localhost:3000/api/v1/halwai/search?latitude=28.5449&longitude=77.3916&guests=180&foodType=veg&specialization=Punjabi&maxDistanceKm=30&limit=10"
+```
+
+Each listing returns: `halwaiId`, `halwaiName`, `shopName`, `foodTypes`, `specializations`, `yearsOfExperience`, `locationDetails`, `minGuestsCapacity`, `maxGuestsCapacity`, `pricePerPlate`, `averageRating`, `reviewCount`, `distanceInKm`
 
 ### Dummy customer API
 
@@ -110,6 +148,13 @@ If MongoDB is not connected, Halwai APIs return `503`.
 - `activeOrders`
 - `totalGuestsServed`
 - `totalCompletedBookings`
+
+### Halwai reviews API
+
+`GET /api/v1/halwai/:halwaiId/reviews` returns:
+- `averageRating`
+- `reviewCount`
+- `reviews`
 
 ### Create incoming order payload
 

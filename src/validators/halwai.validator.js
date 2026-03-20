@@ -16,6 +16,38 @@ const sanitizeOptionalField = (value) => {
   return sanitized.length > 0 ? sanitized : undefined;
 };
 
+const sanitizeStringList = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => String(item || '').trim())
+    .filter((item) => item.length > 0);
+};
+
+const sanitizeLocationDetails = (value) => {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const latitude =
+    value.latitude === undefined || value.latitude === null || value.latitude === ''
+      ? null
+      : Number(value.latitude);
+  const longitude =
+    value.longitude === undefined || value.longitude === null || value.longitude === ''
+      ? null
+      : Number(value.longitude);
+  const physicalAddress = String(value.physicalAddress || '').trim();
+
+  return {
+    latitude,
+    longitude,
+    physicalAddress,
+  };
+};
+
 const validateHalwaiOnboarding = (req, res, next) => {
   const {
     halwaiName,
@@ -25,6 +57,13 @@ const validateHalwaiOnboarding = (req, res, next) => {
     alternatePhoneNumber,
     gstNumber,
     licenseNumber,
+    foodTypes,
+    specializations,
+    yearsOfExperience,
+    locationDetails,
+    minGuestsCapacity,
+    maxGuestsCapacity,
+    pricePerPlate,
   } = req.body;
 
   const sanitizedBody = {
@@ -35,6 +74,25 @@ const validateHalwaiOnboarding = (req, res, next) => {
     alternatePhoneNumber: sanitizeOptionalField(alternatePhoneNumber),
     gstNumber: sanitizeOptionalField(gstNumber),
     licenseNumber: sanitizeOptionalField(licenseNumber),
+    foodTypes: sanitizeStringList(foodTypes),
+    specializations: sanitizeStringList(specializations),
+    yearsOfExperience:
+      yearsOfExperience === undefined || yearsOfExperience === null || yearsOfExperience === ''
+        ? 0
+        : Number(yearsOfExperience),
+    locationDetails: sanitizeLocationDetails(locationDetails),
+    minGuestsCapacity:
+      minGuestsCapacity === undefined || minGuestsCapacity === null || minGuestsCapacity === ''
+        ? 1
+        : Number(minGuestsCapacity),
+    maxGuestsCapacity:
+      maxGuestsCapacity === undefined || maxGuestsCapacity === null || maxGuestsCapacity === ''
+        ? 1
+        : Number(maxGuestsCapacity),
+    pricePerPlate:
+      pricePerPlate === undefined || pricePerPlate === null || pricePerPlate === ''
+        ? 0
+        : Number(pricePerPlate),
   };
 
   if (!sanitizedBody.halwaiName) {
@@ -85,6 +143,47 @@ const validateHalwaiOnboarding = (req, res, next) => {
 
   if (sanitizedBody.licenseNumber && sanitizedBody.licenseNumber.length < 4) {
     return next(createValidationError('License number must be at least 4 characters long.'));
+  }
+
+  if (Number.isNaN(sanitizedBody.yearsOfExperience) || sanitizedBody.yearsOfExperience < 0) {
+    return next(createValidationError('Years of experience must be a non-negative number.'));
+  }
+
+  if (
+    Number.isNaN(sanitizedBody.minGuestsCapacity) ||
+    sanitizedBody.minGuestsCapacity < 1
+  ) {
+    return next(createValidationError('Minimum guest capacity must be at least 1.'));
+  }
+
+  if (
+    Number.isNaN(sanitizedBody.maxGuestsCapacity) ||
+    sanitizedBody.maxGuestsCapacity < sanitizedBody.minGuestsCapacity
+  ) {
+    return next(
+      createValidationError(
+        'Maximum guest capacity must be greater than or equal to minimum guest capacity.'
+      )
+    );
+  }
+
+  if (Number.isNaN(sanitizedBody.pricePerPlate) || sanitizedBody.pricePerPlate < 0) {
+    return next(createValidationError('Price per plate must be a non-negative number.'));
+  }
+
+  if (sanitizedBody.locationDetails) {
+    const { latitude, longitude } = sanitizedBody.locationDetails;
+
+    if (latitude !== null && (Number.isNaN(latitude) || latitude < -90 || latitude > 90)) {
+      return next(createValidationError('Halwai latitude must be between -90 and 90.'));
+    }
+
+    if (
+      longitude !== null &&
+      (Number.isNaN(longitude) || longitude < -180 || longitude > 180)
+    ) {
+      return next(createValidationError('Halwai longitude must be between -180 and 180.'));
+    }
   }
 
   req.body = sanitizedBody;
