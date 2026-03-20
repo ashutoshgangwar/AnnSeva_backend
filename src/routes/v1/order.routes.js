@@ -3,6 +3,7 @@ const {
   createIncomingOrder,
   listIncomingOrders,
   listActiveOrders,
+  getOrderDetails,
   decideIncomingOrder,
   completeOrder,
   getOrderPayment,
@@ -18,8 +19,10 @@ const {
 const router = express.Router();
 
 router.post('/orders', validateCreateOrder, createIncomingOrder);
+router.post('/orders/customer-request', validateCreateOrder, createIncomingOrder);
 router.get('/orders/incoming', listIncomingOrders);
 router.get('/orders/active', listActiveOrders);
+router.get('/orders/:orderId', getOrderDetails);
 router.post('/orders/complete', validateCompleteOrderByCustomer, completeOrder);
 router.get('/orders/:orderId/payment', getOrderPayment);
 router.post('/orders/:orderId/payment/receive', validateReceivePayment, receiveOrderPayment);

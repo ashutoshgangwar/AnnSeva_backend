@@ -43,9 +43,13 @@ src/
 - `POST /api/v1/halwai/onboard`
 - `GET /api/v1/halwai/:halwaiId`
 - `GET /api/v1/halwai/:halwaiId/overview`
+- `POST /api/v1/customers/dummy`
+- `GET /api/v1/customers/:customerId`
 - `POST /api/v1/orders`
+- `POST /api/v1/orders/customer-request`
 - `GET /api/v1/orders/incoming`
 - `GET /api/v1/orders/active`
+- `GET /api/v1/orders/:orderId`
 - `POST /api/v1/orders/complete`
 - `GET /api/v1/orders/:orderId/payment`
 - `POST /api/v1/orders/:orderId/payment/receive`
@@ -68,6 +72,30 @@ src/
 
 Required fields: `halwaiName`, `shopName`, `location`, `phoneNumber`
 
+### Dummy customer API
+
+Use `POST /api/v1/customers/dummy` to create a reusable dummy customer in MongoDB.
+
+If the dummy customer already exists, the same record is returned.
+
+Default dummy customer values:
+
+```json
+{
+  "fullName": "Anita Sharma",
+  "phoneNumber": "8810270935",
+  "email": "anita.sharma@example.com",
+  "address": "Sector 45, Noida",
+  "currentLocation": {
+    "latitude": 28.5449,
+    "longitude": 77.3916
+  },
+  "isDummy": true
+}
+```
+
+Use `GET /api/v1/customers/:customerId` to fetch the saved customer record.
+
 ### Verify Halwai data saved in DB
 
 1. `POST /api/v1/halwai/onboard` and copy `data._id` from response.
@@ -87,24 +115,39 @@ If MongoDB is not connected, Halwai APIs return `503`.
 
 ```json
 {
+  "userId": "PASTE_CUSTOMER_ID_FROM_DUMMY_API",
   "customerName": "Anita Sharma",
   "phoneNumber": "+919876543210",
   "priority": "high",
   "customerAddress": "Sector 45, Noida",
+  "currentLocation": {
+    "latitude": 28.5449,
+    "longitude": 77.3916
+  },
   "eventDate": "2026-04-15T18:30:00.000Z",
   "numberOfGuests": 180,
-  "totalBill": 75000,
+  "eventType": "bhandara",
+  "servingStyle": "plate-service",
+  "additionalNote": "Need evening dinner setup with sweet counter.",
+  "totalBill": 0,
   "menu": [
-    { "itemName": "Paneer Butter Masala" },
-    { "itemName": "Veg Biryani" },
+    { "itemName": "Dal Makhani" },
+    { "itemName": "Chole" },
+    { "itemName": "Jeera Rice" },
     { "itemName": "Gulab Jamun" }
   ]
 }
 ```
 
-Required fields: `customerName`, `phoneNumber`, `priority`, `customerAddress`, `eventDate`, `numberOfGuests`, `menu`, `totalBill`
+Required fields: `userId`, `customerName`, `phoneNumber`, `customerAddress`, `currentLocation`, `eventDate`, `numberOfGuests`, `eventType`, `servingStyle`, `menu`
 
 Priority values: `high`, `medium`, `low`
+
+Event type values: `bhandara`, `langar`, `poojan`, `others`
+
+Serving style values: `plate-service`, `counter`
+
+Allowed menu options: `Dal Makhani`, `Chole`, `Jeera Rice`, `Pulao`, `Roti`, `Boondi Raita`, `Gulab Jamun`, `Kheer`, `Halwa`, `Puri`
 
 ### Halwai accepts/rejects order payload
 
@@ -122,6 +165,40 @@ Allowed flow: `pending -> accept/reject -> reached -> completed`.
 `GET /api/v1/orders/incoming` only returns `pending` orders, so accept/reject/reached/completed orders are not shown there.
 
 `GET /api/v1/orders/active` returns active orders with: `orderId`, `customerName`, `phoneNumber`, `address`, `eventDate`, `numberOfGuests`, `daysLeft`, `selectedMenu`, and `tag` (`active`).
+
+### Get customer order details
+
+Use `GET /api/v1/orders/:orderId` to fetch the full customer request by order id.
+
+Example response fields:
+- `_id`
+- `userId`
+- `customerName`
+- `phoneNumber`
+- `priority`
+- `customerAddress`
+- `currentLocation`
+- `eventDate`
+- `numberOfGuests`
+- `menu`
+- `eventType`
+- `servingStyle`
+- `additionalNote`
+- `totalBill`
+- `status`
+- `paymentStatus`
+- `paymentId`
+- `paymentReceivedAt`
+- `halwaiId`
+- `halwaiDecisionAt`
+- `createdAt`
+- `updatedAt`
+
+### Seed dummy customer from terminal
+
+```bash
+npm run seed:customer
+```
 
 ### Mark order completed payload
 

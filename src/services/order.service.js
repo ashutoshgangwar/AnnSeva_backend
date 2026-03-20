@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Order = require('../models/order.model');
 const Payment = require('../models/payment.model');
+const Customer = require('../models/customer.model');
 
 const assertDatabaseConnected = () => {
   if (mongoose.connection.readyState !== 1) {
@@ -12,7 +13,53 @@ const assertDatabaseConnected = () => {
 
 const createOrder = async (payload) => {
   assertDatabaseConnected();
+
+  const customer = await Customer.findById(payload.userId);
+
+  if (!customer) {
+    const error = new Error('Customer not found for provided user id.');
+    error.statusCode = 404;
+    throw error;
+  }
+
   return Order.create(payload);
+};
+
+const getOrderById = async (orderId) => {
+  assertDatabaseConnected();
+
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    return null;
+  }
+
+  const payment = await Payment.findOne({ orderId: order._id });
+
+  return {
+    _id: order._id,
+    customerName: order.customerName,
+    userId: order.userId,
+    phoneNumber: order.phoneNumber,
+    priority: order.priority,
+    customerAddress: order.customerAddress,
+    currentLocation: order.currentLocation,
+    eventDate: order.eventDate,
+    numberOfGuests: order.numberOfGuests,
+    menu: order.menu,
+    eventType: order.eventType,
+    servingStyle: order.servingStyle,
+    additionalNote: order.additionalNote,
+    totalBill: order.totalBill,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    paymentId: payment?._id || null,
+    paymentReceivedAt: order.paymentReceivedAt,
+    halwaiId: order.halwaiId,
+    halwaiDecisionAt: order.halwaiDecisionAt,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+  };
 };
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -64,11 +111,16 @@ const getActiveOrders = async () => {
 
   return orders.map((order) => ({
     orderId: order._id,
+    userId: order.userId,
     customerName: order.customerName,
     phoneNumber: order.phoneNumber,
     address: order.customerAddress,
+    currentLocation: order.currentLocation,
     eventDate: order.eventDate,
     numberOfGuests: order.numberOfGuests,
+    eventType: order.eventType,
+    servingStyle: order.servingStyle,
+    additionalNote: order.additionalNote,
     daysLeft: calculateDaysLeft(order.eventDate),
     selectedMenu: order.menu,
     tag: 'active',
@@ -162,12 +214,17 @@ const getOrderPaymentDetails = async (orderId) => {
 
   return {
     orderId: order._id,
+    userId: order.userId,
     paymentId: payment._id,
     totalBill: order.totalBill,
     userName: order.customerName,
     address: order.customerAddress,
+    currentLocation: order.currentLocation,
     phoneNumber: order.phoneNumber,
     guests: order.numberOfGuests,
+    eventType: order.eventType,
+    servingStyle: order.servingStyle,
+    additionalNote: order.additionalNote,
     paymentStatus: payment.status,
     menu: order.menu,
   };
@@ -218,6 +275,7 @@ const markPaymentReceived = async (orderId, paymentId) => {
 
 module.exports = {
   createOrder,
+  getOrderById,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,

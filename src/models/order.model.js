@@ -13,12 +13,37 @@ const menuItemSchema = new mongoose.Schema(
   }
 );
 
+const currentLocationSchema = new mongoose.Schema(
+  {
+    latitude: {
+      type: Number,
+      required: true,
+      min: -90,
+      max: 90,
+    },
+    longitude: {
+      type: Number,
+      required: true,
+      min: -180,
+      max: 180,
+    },
+  },
+  {
+    _id: false,
+  }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     customerName: {
       type: String,
       required: true,
       trim: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: true,
     },
     phoneNumber: {
       type: String,
@@ -36,6 +61,10 @@ const orderSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    currentLocation: {
+      type: currentLocationSchema,
+      required: true,
+    },
     eventDate: {
       type: Date,
       required: true,
@@ -52,6 +81,21 @@ const orderSchema = new mongoose.Schema(
         validator: (items) => Array.isArray(items) && items.length > 0,
         message: 'Menu must contain at least one item.',
       },
+    },
+    eventType: {
+      type: String,
+      enum: ['bhandara', 'langar', 'poojan', 'others'],
+      required: true,
+    },
+    servingStyle: {
+      type: String,
+      enum: ['plate-service', 'counter'],
+      required: true,
+    },
+    additionalNote: {
+      type: String,
+      trim: true,
+      default: '',
     },
     totalBill: {
       type: Number,

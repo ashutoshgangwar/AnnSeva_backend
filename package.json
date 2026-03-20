@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "seed:customer": "node scripts/seedDummyCustomer.js",
     "test": "echo \"No tests configured\""
   },
   "keywords": [],

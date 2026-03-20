@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const asyncHandler = require('../utils/asyncHandler');
 const {
   createOrder,
+  getOrderById,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,
@@ -37,6 +38,30 @@ const listActiveOrders = asyncHandler(async (req, res) => {
     success: true,
     message: 'Active orders fetched successfully.',
     data: orders,
+  });
+});
+
+const getOrderDetails = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    const error = new Error('Order id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const order = await getOrderById(orderId);
+
+  if (!order) {
+    const error = new Error('Order not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Order details fetched successfully.',
+    data: order,
   });
 });
 
@@ -135,6 +160,7 @@ module.exports = {
   createIncomingOrder,
   listIncomingOrders,
   listActiveOrders,
+  getOrderDetails,
   decideIncomingOrder,
   completeOrder,
   getOrderPayment,
