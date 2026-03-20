@@ -40,6 +40,9 @@ src/
 ## API routes
 
 - `GET /api/v1/health`
+- `POST /api/v1/auth/google`
+- `GET /api/v1/auth/me`
+- `PATCH /api/v1/auth/me/profile-link`
 - `POST /api/v1/halwai/onboard`
 - `GET /api/v1/halwai/search`
 - `GET /api/v1/halwai/:halwaiId`
@@ -59,6 +62,55 @@ src/
 - `POST /api/v1/orders/:orderId/payment/receive`
 - `POST /api/v1/orders/:orderId/status`
 - `PATCH /api/v1/orders/:orderId/decision`
+
+### Google authentication
+
+Use `POST /api/v1/auth/google` with Google ID token and role:
+
+```json
+{
+  "idToken": "GOOGLE_ID_TOKEN_FROM_CLIENT",
+  "role": "customer"
+}
+```
+
+or
+
+```json
+{
+  "idToken": "GOOGLE_ID_TOKEN_FROM_CLIENT",
+  "role": "halwai"
+}
+```
+
+Response returns:
+- `data.token` (JWT access token)
+- `data.user.role`
+- `data.user.profileId` (null until linked)
+
+### Link logged-in user to existing profile
+
+Use `PATCH /api/v1/auth/me/profile-link` with bearer token:
+
+```json
+{
+  "profileId": "PASTE_CUSTOMER_OR_HALWAI_ID"
+}
+```
+
+### Authorization header
+
+For protected APIs, pass JWT in header:
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+### Role-based access
+
+- Customer-only: `POST /api/v1/orders`, `POST /api/v1/orders/customer-request`, `POST /api/v1/orders/complete`, customer profile/orders/payment/rating endpoints.
+- Halwai-only: `POST /api/v1/halwai/onboard`, `GET /api/v1/orders/incoming`, `GET /api/v1/orders/active`, order decision/payment receive endpoints, and halwai overview.
+- Public: `GET /api/v1/health`, `GET /api/v1/halwai/search`, `GET /api/v1/halwai/:halwaiId`, `GET /api/v1/halwai/:halwaiId/reviews`, `GET /api/v1/orders/:orderId`, `POST /api/v1/customers/dummy`.
 
 ### Halwai onboarding payload
 
@@ -322,3 +374,409 @@ Receive payment payload:
 For receive payment API, both values are required:
 - `orderId` in URL
 - `paymentId` in request body
+
+---
+
+## Complete auth-to-rating API flow (single reference)
+
+Base URL:
+
+`http://localhost:3000/api/v1`
+
+Protected APIs require header:
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+### Step 1: Customer Google login
+
+**POST** `/api/v1/auth/google`
+
+Request:
+
+```json
+{
+  "idToken": "GOOGLE_ID_TOKEN_FROM_CLIENT",
+  "role": "customer"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Google login successful.",
+  "data": {
+    "token": "JWT_TOKEN",
+    "user": {
+      "userId": "67f...",
+      "name": "Ashutosh",
+      "email": "ashu@example.com",
+      "role": "customer",
+      "profileId": null,
+      "profileModel": null,
+      "picture": "https://..."
+    }
+  }
+}
+```
+
+### Step 2: Create or get customer profile
+
+**POST** `/api/v1/customers/dummy`
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Dummy customer created successfully.",
+  "data": {
+    "_id": "67a1234567890abcdef12345",
+    "fullName": "Anita Sharma",
+    "phoneNumber": "8810270935",
+    "email": "anita.sharma@example.com",
+    "address": "Sector 45, Noida",
+    "currentLocation": {
+      "latitude": 28.5449,
+      "longitude": 77.3916
+    },
+    "isDummy": true
+  }
+}
+```
+
+### Step 3: Link customer auth user with customer profile
+
+**PATCH** `/api/v1/auth/me/profile-link`
+
+Request:
+
+```json
+{
+  "profileId": "67a1234567890abcdef12345"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Profile linked successfully.",
+  "data": {
+    "token": "NEW_CUSTOMER_JWT",
+    "user": {
+      "userId": "67f...",
+      "name": "Ashutosh",
+      "email": "ashu@example.com",
+      "role": "customer",
+      "profileId": "67a1234567890abcdef12345",
+      "profileModel": "Customer",
+      "picture": "https://..."
+    }
+  }
+}
+```
+
+### Step 4: Halwai Google login
+
+**POST** `/api/v1/auth/google`
+
+Request:
+
+```json
+{
+  "idToken": "GOOGLE_ID_TOKEN_FROM_CLIENT",
+  "role": "halwai"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Google login successful.",
+  "data": {
+    "token": "HALWAI_JWT",
+    "user": {
+      "userId": "67hAuth...",
+      "name": "Halwai Owner",
+      "email": "halwai@example.com",
+      "role": "halwai",
+      "profileId": null,
+      "profileModel": null,
+      "picture": "https://..."
+    }
+  }
+}
+```
+
+### Step 5: Halwai onboarding
+
+**POST** `/api/v1/halwai/onboard`
+
+Request:
+
+```json
+{
+  "halwaiName": "Ramesh Sweets",
+  "shopName": "Ramesh Mithai Bhandar",
+  "location": "Noida Sector 62",
+  "phoneNumber": "+919876543210",
+  "foodTypes": ["veg", "sweets"],
+  "specializations": ["North Indian", "Punjabi"],
+  "yearsOfExperience": 12,
+  "locationDetails": {
+    "latitude": 28.6139,
+    "longitude": 77.209,
+    "physicalAddress": "Shop 22, Sector 62, Noida"
+  },
+  "minGuestsCapacity": 50,
+  "maxGuestsCapacity": 1000,
+  "pricePerPlate": 220
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Halwai onboarded successfully.",
+  "data": {
+    "_id": "67halwai...",
+    "halwaiName": "Ramesh Sweets",
+    "shopName": "Ramesh Mithai Bhandar",
+    "location": "Noida Sector 62",
+    "phoneNumber": "+919876543210",
+    "pricePerPlate": 220
+  }
+}
+```
+
+### Step 6: Customer searches halwai
+
+**GET** `/api/v1/halwai/search?latitude=28.5449&longitude=77.3916&guests=180&limit=10`
+
+Response (example):
+
+```json
+{
+  "success": true,
+  "message": "Nearby halwai listings fetched successfully.",
+  "data": [
+    {
+      "halwaiId": "67halwai...",
+      "halwaiName": "Ramesh Sweets",
+      "averageRating": 4.5,
+      "reviewCount": 12,
+      "distanceInKm": 2.2,
+      "pricePerPlate": 220
+    }
+  ]
+}
+```
+
+### Step 7: Customer creates order
+
+**POST** `/api/v1/orders/customer-request`
+
+Request:
+
+```json
+{
+  "userId": "67a1234567890abcdef12345",
+  "customerName": "Anita Sharma",
+  "phoneNumber": "+919876543210",
+  "priority": "high",
+  "customerAddress": "Sector 45, Noida",
+  "currentLocation": {
+    "latitude": 28.5449,
+    "longitude": 77.3916
+  },
+  "eventDate": "2026-04-15T18:30:00.000Z",
+  "numberOfGuests": 180,
+  "eventType": "bhandara",
+  "servingStyle": "plate-service",
+  "additionalNote": "Need evening dinner setup with sweet counter.",
+  "totalBill": 0,
+  "menu": [
+    { "itemName": "Dal Makhani" },
+    { "itemName": "Chole" }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Order created successfully.",
+  "data": {
+    "_id": "67order...",
+    "status": "pending",
+    "paymentStatus": "pending"
+  }
+}
+```
+
+### Step 8: Halwai sees incoming orders
+
+**GET** `/api/v1/orders/incoming`
+
+### Step 9: Halwai accepts order
+
+**PATCH** `/api/v1/orders/:orderId/decision`
+
+Request:
+
+```json
+{
+  "decision": "accept",
+  "halwaiId": "67halwai..."
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Order accept by halwai successfully.",
+  "data": {
+    "_id": "67order...",
+    "status": "accept",
+    "halwaiId": "67halwai..."
+  }
+}
+```
+
+### Step 10: Customer marks order complete
+
+**POST** `/api/v1/orders/complete`
+
+Request:
+
+```json
+{
+  "orderId": "67order...",
+  "customerName": "Anita Sharma"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Order marked as completed successfully.",
+  "data": {
+    "order": {
+      "_id": "67order...",
+      "status": "completed"
+    },
+    "paymentId": "67payment..."
+  }
+}
+```
+
+### Step 11: Halwai checks payment
+
+**GET** `/api/v1/orders/:orderId/payment`
+
+Response fields include:
+- `paymentId`
+- `totalBill`
+- `userName`
+- `address`
+- `phoneNumber`
+- `guests`
+- `paymentStatus`
+- `menu`
+
+### Step 12: Halwai receives payment
+
+**POST** `/api/v1/orders/:orderId/payment/receive`
+
+Request:
+
+```json
+{
+  "paymentId": "67payment..."
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Payment marked as received successfully.",
+  "data": {
+    "orderId": "67order...",
+    "paymentId": "67payment...",
+    "paymentStatus": "received",
+    "paymentReceivedAt": "2026-03-21T13:15:00.000Z"
+  }
+}
+```
+
+### Step 13: Customer checks payment details
+
+**GET** `/api/v1/customers/:customerId/orders/:orderId/payment-details`
+
+Response fields include:
+- `totalAmount`
+- `paymentStatus`
+- `location`
+- `eventDate`
+- `guestNumbers`
+- `pricePerPlate`
+- `totalPlates`
+- `status`
+- `menuItems`
+
+### Step 14: Customer submits rating (final)
+
+**POST** `/api/v1/customers/:customerId/orders/:orderId/rating`
+
+Request:
+
+```json
+{
+  "rating": 4,
+  "menuServed": ["Paneer Tikka", "Biryani", "Naan"],
+  "reviewText": "Excellent service and delicious food!"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Rating submitted successfully.",
+  "data": {
+    "reviewId": "67review...",
+    "halwaiId": "67halwai...",
+    "halwaiName": "Ramesh Sweets",
+    "rating": 4,
+    "createdAt": "2026-03-21T14:00:00.000Z"
+  }
+}
+```
+
+### Step 15: Verify rating appears
+
+**GET** `/api/v1/halwai/:halwaiId/reviews`
+
+Response includes:
+- `averageRating`
+- `reviewCount`
+- `reviews[]`
+

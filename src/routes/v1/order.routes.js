@@ -15,18 +15,19 @@ const {
   validateCompleteOrderByCustomer,
   validateReceivePayment,
 } = require('../../validators/order.validator');
+const { authenticate, authorizeRoles } = require('../../middlewares/auth');
 
 const router = express.Router();
 
-router.post('/orders', validateCreateOrder, createIncomingOrder);
-router.post('/orders/customer-request', validateCreateOrder, createIncomingOrder);
-router.get('/orders/incoming', listIncomingOrders);
-router.get('/orders/active', listActiveOrders);
+router.post('/orders', authenticate, authorizeRoles('customer'), validateCreateOrder, createIncomingOrder);
+router.post('/orders/customer-request', authenticate, authorizeRoles('customer'), validateCreateOrder, createIncomingOrder);
+router.get('/orders/incoming', authenticate, authorizeRoles('halwai'), listIncomingOrders);
+router.get('/orders/active', authenticate, authorizeRoles('halwai'), listActiveOrders);
 router.get('/orders/:orderId', getOrderDetails);
-router.post('/orders/complete', validateCompleteOrderByCustomer, completeOrder);
-router.get('/orders/:orderId/payment', getOrderPayment);
-router.post('/orders/:orderId/payment/receive', validateReceivePayment, receiveOrderPayment);
-router.post('/orders/:orderId/status', validateOrderDecision, decideIncomingOrder);
-router.patch('/orders/:orderId/decision', validateOrderDecision, decideIncomingOrder);
+router.post('/orders/complete', authenticate, authorizeRoles('customer'), validateCompleteOrderByCustomer, completeOrder);
+router.get('/orders/:orderId/payment', authenticate, authorizeRoles('halwai'), getOrderPayment);
+router.post('/orders/:orderId/payment/receive', authenticate, authorizeRoles('halwai'), validateReceivePayment, receiveOrderPayment);
+router.post('/orders/:orderId/status', authenticate, authorizeRoles('halwai'), validateOrderDecision, decideIncomingOrder);
+router.patch('/orders/:orderId/decision', authenticate, authorizeRoles('halwai'), validateOrderDecision, decideIncomingOrder);
 
 module.exports = router;

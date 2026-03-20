@@ -9,6 +9,8 @@ const env = {
   port: Number(process.env.PORT) || 3000,
   mongoUri: process.env.MONGO_URI || '',
   apiPrefix: process.env.API_PREFIX || '/api',
+  jwtSecret: process.env.JWT_SECRET || '',
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
 };
 
 module.exports = env;

@@ -7,9 +7,20 @@ const {
   searchHalwaiListings,
   getHalwaiReviews,
 } = require('../services/halwai.service');
+const { attachHalwaiProfileToAuthUser } = require('../services/auth.service');
 
 const onboardHalwai = asyncHandler(async (req, res) => {
+  if (req.user?.profileId) {
+    const error = new Error('Your account is already linked to a halwai profile.');
+    error.statusCode = 409;
+    throw error;
+  }
+
   const halwai = await createHalwai(req.body);
+
+  if (req.user?.userId) {
+    await attachHalwaiProfileToAuthUser(req.user.userId, halwai._id);
+  }
 
   res.status(201).json({
     success: true,
