@@ -3,6 +3,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const {
   createOrder,
   getOrderById,
+  getCustomerOrdersSummary,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,
@@ -62,6 +63,30 @@ const getOrderDetails = asyncHandler(async (req, res) => {
     success: true,
     message: 'Order details fetched successfully.',
     data: order,
+  });
+});
+
+const getCustomerOrders = asyncHandler(async (req, res) => {
+  const { customerId } = req.params;
+
+  if (!mongoose.isValidObjectId(customerId)) {
+    const error = new Error('Customer id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const summary = await getCustomerOrdersSummary(customerId);
+
+  if (!summary) {
+    const error = new Error('Customer not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Customer orders fetched successfully.',
+    data: summary,
   });
 });
 
@@ -161,6 +186,7 @@ module.exports = {
   listIncomingOrders,
   listActiveOrders,
   getOrderDetails,
+  getCustomerOrders,
   decideIncomingOrder,
   completeOrder,
   getOrderPayment,

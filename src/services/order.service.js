@@ -62,6 +62,69 @@ const getOrderById = async (orderId) => {
   };
 };
 
+const mapCustomerOrderStatus = (status) => {
+  if (status === 'pending') {
+    return 'submitted';
+  }
+
+  if (status === 'accept') {
+    return 'accepted';
+  }
+
+  return status;
+};
+
+const getCustomerOrdersSummary = async (customerId) => {
+  assertDatabaseConnected();
+
+  const customer = await Customer.findById(customerId);
+
+  if (!customer) {
+    return null;
+  }
+
+  const orders = await Order.find({ userId: customerId }).sort({ createdAt: -1 });
+
+  const statusSummary = {
+    submitted: 0,
+    accepted: 0,
+    reject: 0,
+    reached: 0,
+    completed: 0,
+  };
+
+  const orderDetails = orders.map((order) => {
+    const normalizedStatus = mapCustomerOrderStatus(order.status);
+    statusSummary[normalizedStatus] = (statusSummary[normalizedStatus] || 0) + 1;
+
+    return {
+      orderId: order._id,
+      customerName: order.customerName,
+      customerLocation: {
+        address: order.customerAddress,
+        currentLocation: order.currentLocation,
+      },
+      estimatedCost: order.totalBill,
+      eventDate: order.eventDate,
+      numberOfGuests: order.numberOfGuests,
+      menuItems: order.menu.map((item) => item.itemName),
+      eventType: order.eventType,
+      servingStyle: order.servingStyle,
+      status: normalizedStatus,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+  });
+
+  return {
+    customerId: customer._id,
+    customerName: customer.fullName,
+    totalOrdersCreated: orders.length,
+    statusSummary,
+    orders: orderDetails,
+  };
+};
+
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const calculateDaysLeft = (eventDate) => {
@@ -276,6 +339,7 @@ const markPaymentReceived = async (orderId, paymentId) => {
 module.exports = {
   createOrder,
   getOrderById,
+  getCustomerOrdersSummary,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,

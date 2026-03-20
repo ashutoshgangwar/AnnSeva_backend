@@ -47,6 +47,7 @@ src/
 - `GET /api/v1/halwai/:halwaiId/reviews`
 - `POST /api/v1/customers/dummy`
 - `GET /api/v1/customers/:customerId`
+- `GET /api/v1/customers/:customerId/orders`
 - `POST /api/v1/orders`
 - `POST /api/v1/orders/customer-request`
 - `GET /api/v1/orders/incoming`
@@ -133,6 +134,30 @@ Default dummy customer values:
 ```
 
 Use `GET /api/v1/customers/:customerId` to fetch the saved customer record.
+
+### Customer orders summary API
+
+Use `GET /api/v1/customers/:customerId/orders` to fetch how many orders a customer has created and the details of each order.
+
+Response includes:
+- `totalOrdersCreated`
+- `statusSummary.submitted`
+- `statusSummary.accepted`
+- `statusSummary.reject`
+- `statusSummary.reached`
+- `statusSummary.completed`
+- `orders[].customerLocation`
+- `orders[].estimatedCost`
+- `orders[].eventDate`
+- `orders[].numberOfGuests`
+- `orders[].menuItems`
+- `orders[].status`
+
+Example:
+
+```bash
+curl http://localhost:3000/api/v1/customers/PASTE_CUSTOMER_ID/orders
+```
 
 ### Verify Halwai data saved in DB
 
