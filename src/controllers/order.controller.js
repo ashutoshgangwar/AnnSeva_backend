@@ -4,6 +4,8 @@ const {
   createOrder,
   getOrderById,
   getCustomerOrdersSummary,
+  getCustomerOrderPaymentDetails,
+  submitHalwaiRating,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,
@@ -87,6 +89,66 @@ const getCustomerOrders = asyncHandler(async (req, res) => {
     success: true,
     message: 'Customer orders fetched successfully.',
     data: summary,
+  });
+});
+
+const getCustomerOrderPayment = asyncHandler(async (req, res) => {
+  const { customerId, orderId } = req.params;
+
+  if (!mongoose.isValidObjectId(customerId)) {
+    const error = new Error('Customer id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    const error = new Error('Order id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await getCustomerOrderPaymentDetails(customerId, orderId);
+
+  if (!result) {
+    const error = new Error('Customer not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!result.paymentDetails) {
+    const error = new Error('Order not found for this customer.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Customer order payment details fetched successfully.',
+    data: result.paymentDetails,
+  });
+});
+
+const submitCustomerRating = asyncHandler(async (req, res) => {
+  const { customerId, orderId } = req.params;
+
+  if (!mongoose.isValidObjectId(customerId)) {
+    const error = new Error('Customer id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    const error = new Error('Order id must be a valid MongoDB ObjectId.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const review = await submitHalwaiRating(customerId, orderId, req.body);
+
+  res.status(201).json({
+    success: true,
+    message: 'Rating submitted successfully.',
+    data: review,
   });
 });
 
@@ -187,6 +249,8 @@ module.exports = {
   listActiveOrders,
   getOrderDetails,
   getCustomerOrders,
+  getCustomerOrderPayment,
+  submitCustomerRating,
   decideIncomingOrder,
   completeOrder,
   getOrderPayment,

@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Order = require('../models/order.model');
 const Payment = require('../models/payment.model');
 const Customer = require('../models/customer.model');
+const Halwai = require('../models/halwai.model');
+const HalwaiReview = require('../models/halwaiReview.model');
 
 const assertDatabaseConnected = () => {
   if (mongoose.connection.readyState !== 1) {
@@ -122,6 +124,64 @@ const getCustomerOrdersSummary = async (customerId) => {
     totalOrdersCreated: orders.length,
     statusSummary,
     orders: orderDetails,
+  };
+};
+
+const getCustomerOrderPaymentDetails = async (customerId, orderId) => {
+  assertDatabaseConnected();
+
+  const customer = await Customer.findById(customerId);
+
+  if (!customer) {
+    return null;
+  }
+
+  const order = await Order.findOne({
+    _id: orderId,
+    userId: customerId,
+  });
+
+  if (!order) {
+    return {
+      customer,
+      paymentDetails: null,
+    };
+  }
+
+  const payment = await Payment.findOne({ orderId: order._id });
+  const halwai = order.halwaiId ? await Halwai.findById(order.halwaiId) : null;
+  const totalPlates = order.numberOfGuests;
+  const pricePerPlate =
+    halwai?.pricePerPlate ||
+    (totalPlates > 0 && order.totalBill > 0 ? Number((order.totalBill / totalPlates).toFixed(2)) : 0);
+  const totalAmount =
+    order.totalBill > 0 ? order.totalBill : Number((pricePerPlate * totalPlates).toFixed(2));
+
+  return {
+    customer,
+    paymentDetails: {
+      customerId: customer._id,
+      orderId: order._id,
+      paymentId: payment?._id || null,
+      customerName: order.customerName,
+      totalAmount,
+      paymentStatus: payment?.status || order.paymentStatus,
+      location: {
+        address: order.customerAddress,
+        currentLocation: order.currentLocation,
+      },
+      eventDate: order.eventDate,
+      guestNumbers: order.numberOfGuests,
+      pricePerPlate,
+      totalPlates,
+      status: mapCustomerOrderStatus(order.status),
+      menuItems: order.menu.map((item) => item.itemName),
+      eventType: order.eventType,
+      servingStyle: order.servingStyle,
+      paymentReceivedAt: payment?.receivedAt || order.paymentReceivedAt,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    },
   };
 };
 
@@ -336,10 +396,87 @@ const markPaymentReceived = async (orderId, paymentId) => {
   };
 };
 
+const submitHalwaiRating = async (customerId, orderId, payload) => {
+  assertDatabaseConnected();
+
+  const customer = await Customer.findById(customerId);
+
+  if (!customer) {
+    const error = new Error('Customer not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const order = await Order.findOne({
+    _id: orderId,
+    userId: customerId,
+  });
+
+  if (!order) {
+    const error = new Error('Order not found for this customer.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!order.halwaiId) {
+    const error = new Error('No halwai assigned to this order.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const halwai = await Halwai.findById(order.halwaiId);
+
+  if (!halwai) {
+    const error = new Error('Halwai not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const rating = Number(payload.rating);
+
+  if (Number.isNaN(rating) || rating < 1 || rating > 5) {
+    const error = new Error('Rating must be a number between 1 and 5.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const menuServed = Array.isArray(payload.menuServed)
+    ? payload.menuServed.map((item) => String(item || '').trim()).filter((item) => item.length > 0)
+    : [];
+
+  if (menuServed.length === 0) {
+    const error = new Error('Menu served must include at least one item.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const reviewText = String(payload.reviewText || '').trim();
+
+  const review = await HalwaiReview.create({
+    halwaiId: order.halwaiId,
+    orderId: order._id,
+    customerId: customer._id,
+    customerName: customer.fullName,
+    rating,
+    menuServed,
+    reviewText,
+  });
+
+  return {
+    reviewId: review._id,
+    halwaiId: halwai._id,
+    halwaiName: halwai.halwaiName,
+    rating: review.rating,
+    createdAt: review.createdAt,
+  };
+};
+
 module.exports = {
   createOrder,
   getOrderById,
   getCustomerOrdersSummary,
+  getCustomerOrderPaymentDetails,
+  submitHalwaiRating,
   getIncomingOrders,
   getActiveOrders,
   respondToOrder,

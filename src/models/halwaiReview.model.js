@@ -8,6 +8,12 @@ const halwaiReviewSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
+      default: null,
+      index: true,
+    },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
@@ -23,6 +29,10 @@ const halwaiReviewSchema = new mongoose.Schema(
       required: true,
       min: 1,
       max: 5,
+    },
+    menuServed: {
+      type: [String],
+      default: [],
     },
     reviewText: {
       type: String,

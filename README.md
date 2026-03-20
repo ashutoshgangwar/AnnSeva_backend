@@ -48,6 +48,7 @@ src/
 - `POST /api/v1/customers/dummy`
 - `GET /api/v1/customers/:customerId`
 - `GET /api/v1/customers/:customerId/orders`
+- `GET /api/v1/customers/:customerId/orders/:orderId/payment-details`
 - `POST /api/v1/orders`
 - `POST /api/v1/orders/customer-request`
 - `GET /api/v1/orders/incoming`
@@ -157,6 +158,27 @@ Example:
 
 ```bash
 curl http://localhost:3000/api/v1/customers/PASTE_CUSTOMER_ID/orders
+```
+
+### Customer order payment details API
+
+Use `GET /api/v1/customers/:customerId/orders/:orderId/payment-details` to fetch payment details for one specific order belonging to that customer.
+
+Response includes:
+- `totalAmount`
+- `paymentStatus`
+- `location`
+- `eventDate`
+- `guestNumbers`
+- `pricePerPlate`
+- `totalPlates`
+- `status`
+- `menuItems`
+
+Example:
+
+```bash
+curl http://localhost:3000/api/v1/customers/PASTE_CUSTOMER_ID/orders/PASTE_ORDER_ID/payment-details
 ```
 
 ### Verify Halwai data saved in DB
