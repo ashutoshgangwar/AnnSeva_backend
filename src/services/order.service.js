@@ -50,6 +50,52 @@ const resolveCustomerIdFromUserId = async (userId) => {
   return linkedCustomer._id;
 };
 
+const resolveCustomerContext = async (customerId) => {
+  const customer = await Customer.findById(customerId);
+
+  if (customer) {
+    return {
+      customerId: customer._id,
+      customerName: customer.fullName,
+      customer,
+    };
+  }
+
+  const authUser = await AuthUser.findById(customerId);
+
+  if (!authUser) {
+    return null;
+  }
+
+  if (authUser.role !== 'customer') {
+    const error = new Error('Provided customer id does not belong to a customer account.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!authUser.profileId) {
+    return {
+      customerId: authUser._id,
+      customerName: authUser.name,
+      customer: null,
+    };
+  }
+
+  const linkedCustomer = await Customer.findById(authUser.profileId);
+
+  if (!linkedCustomer) {
+    const error = new Error('Linked customer profile was not found. Please relink your profile.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    customerId: linkedCustomer._id,
+    customerName: linkedCustomer.fullName,
+    customer: linkedCustomer,
+  };
+};
+
 const createOrder = async (payload) => {
   assertDatabaseConnected();
 
@@ -113,13 +159,13 @@ const mapCustomerOrderStatus = (status) => {
 const getCustomerOrdersSummary = async (customerId) => {
   assertDatabaseConnected();
 
-  const customer = await Customer.findById(customerId);
+  const customerContext = await resolveCustomerContext(customerId);
 
-  if (!customer) {
+  if (!customerContext) {
     return null;
   }
 
-  const orders = await Order.find({ userId: customerId }).sort({ createdAt: -1 });
+  const orders = await Order.find({ userId: customerContext.customerId }).sort({ createdAt: -1 });
 
   const statusSummary = {
     submitted: 0,
@@ -153,8 +199,8 @@ const getCustomerOrdersSummary = async (customerId) => {
   });
 
   return {
-    customerId: customer._id,
-    customerName: customer.fullName,
+    customerId: customerContext.customerId,
+    customerName: customerContext.customerName,
     totalOrdersCreated: orders.length,
     statusSummary,
     orders: orderDetails,
@@ -164,20 +210,20 @@ const getCustomerOrdersSummary = async (customerId) => {
 const getCustomerOrderPaymentDetails = async (customerId, orderId) => {
   assertDatabaseConnected();
 
-  const customer = await Customer.findById(customerId);
+  const customerContext = await resolveCustomerContext(customerId);
 
-  if (!customer) {
+  if (!customerContext) {
     return null;
   }
 
   const order = await Order.findOne({
     _id: orderId,
-    userId: customerId,
+    userId: customerContext.customerId,
   });
 
   if (!order) {
     return {
-      customer,
+      customer: customerContext.customer,
       paymentDetails: null,
     };
   }
@@ -192,9 +238,9 @@ const getCustomerOrderPaymentDetails = async (customerId, orderId) => {
     order.totalBill > 0 ? order.totalBill : Number((pricePerPlate * totalPlates).toFixed(2));
 
   return {
-    customer,
+    customer: customerContext.customer,
     paymentDetails: {
-      customerId: customer._id,
+      customerId: customerContext.customerId,
       orderId: order._id,
       paymentId: payment?._id || null,
       customerName: order.customerName,
@@ -433,9 +479,9 @@ const markPaymentReceived = async (orderId, paymentId) => {
 const submitHalwaiRating = async (customerId, orderId, payload) => {
   assertDatabaseConnected();
 
-  const customer = await Customer.findById(customerId);
+  const customerContext = await resolveCustomerContext(customerId);
 
-  if (!customer) {
+  if (!customerContext) {
     const error = new Error('Customer not found.');
     error.statusCode = 404;
     throw error;
@@ -443,7 +489,7 @@ const submitHalwaiRating = async (customerId, orderId, payload) => {
 
   const order = await Order.findOne({
     _id: orderId,
-    userId: customerId,
+    userId: customerContext.customerId,
   });
 
   if (!order) {
@@ -489,8 +535,8 @@ const submitHalwaiRating = async (customerId, orderId, payload) => {
   const review = await HalwaiReview.create({
     halwaiId: order.halwaiId,
     orderId: order._id,
-    customerId: customer._id,
-    customerName: customer.fullName,
+    customerId: customerContext.customerId,
+    customerName: customerContext.customerName,
     rating,
     menuServed,
     reviewText,
