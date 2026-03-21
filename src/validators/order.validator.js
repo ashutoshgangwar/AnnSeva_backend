@@ -99,8 +99,12 @@ const sanitizeCurrentLocation = (value) => {
 };
 
 const validateCreateOrder = (req, res, next) => {
-  const customerName = sanitizeString(req.body.customerName);
-  const userId = sanitizeString(req.body.userId);
+  const customerName = sanitizeString(
+    req.body.customerName || (req.user?.role === 'customer' ? req.user.name : '')
+  );
+  const userId = sanitizeString(
+    req.body.userId || (req.user?.role === 'customer' ? req.user.userId : '')
+  );
   const phoneNumber = sanitizeString(req.body.phoneNumber);
   const priority = sanitizeString(req.body.priority || 'medium').toLowerCase();
   const customerAddress = sanitizeString(req.body.customerAddress);

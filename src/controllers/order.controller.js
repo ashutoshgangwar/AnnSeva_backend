@@ -15,8 +15,11 @@ const {
 } = require('../services/order.service');
 
 const createIncomingOrder = asyncHandler(async (req, res) => {
-  if (req.user?.role === 'customer' && req.user.profileId) {
-    req.body.userId = req.user.profileId;
+  if (req.user?.role === 'customer') {
+    req.body.userId = req.user.userId;
+    if (!req.body.customerName) {
+      req.body.customerName = req.user.name;
+    }
   }
 
   const order = await createOrder(req.body);

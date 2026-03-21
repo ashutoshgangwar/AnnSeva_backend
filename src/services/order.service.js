@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/order.model');
 const Payment = require('../models/payment.model');
 const Customer = require('../models/customer.model');
+const AuthUser = require('../models/authUser.model');
 const Halwai = require('../models/halwai.model');
 const HalwaiReview = require('../models/halwaiReview.model');
 
@@ -13,18 +14,51 @@ const assertDatabaseConnected = () => {
   }
 };
 
-const createOrder = async (payload) => {
-  assertDatabaseConnected();
+const resolveCustomerIdFromUserId = async (userId) => {
+  const customer = await Customer.findById(userId);
 
-  const customer = await Customer.findById(payload.userId);
+  if (customer) {
+    return customer._id;
+  }
 
-  if (!customer) {
+  const authUser = await AuthUser.findById(userId);
+
+  if (!authUser) {
     const error = new Error('Customer not found for provided user id.');
     error.statusCode = 404;
     throw error;
   }
 
-  return Order.create(payload);
+  if (authUser.role !== 'customer') {
+    const error = new Error('Provided user id does not belong to a customer account.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!authUser.profileId) {
+    return authUser._id;
+  }
+
+  const linkedCustomer = await Customer.findById(authUser.profileId);
+
+  if (!linkedCustomer) {
+    const error = new Error('Linked customer profile was not found. Please relink your profile.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return linkedCustomer._id;
+};
+
+const createOrder = async (payload) => {
+  assertDatabaseConnected();
+
+  const customerId = await resolveCustomerIdFromUserId(payload.userId);
+
+  return Order.create({
+    ...payload,
+    userId: customerId,
+  });
 };
 
 const getOrderById = async (orderId) => {
