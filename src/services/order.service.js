@@ -304,7 +304,24 @@ const getOrCreatePaymentForCompletedOrder = async (order) => {
 
 const getIncomingOrders = async () => {
   assertDatabaseConnected();
-  return Order.find({ status: 'pending' }).sort({ priority: 1, eventDate: 1, createdAt: -1 });
+
+  const orders = await Order.find({ status: 'pending' }).sort({ priority: 1, eventDate: 1, createdAt: -1 });
+
+  return orders.map((order) => ({
+    orderId: order._id,
+    customerName: order.customerName,
+    phoneNumber: order.phoneNumber,
+    address: order.customerAddress,
+    eventDate: order.eventDate,
+    numberOfGuests: order.numberOfGuests,
+    eventType: order.eventType,
+    servingStyle: order.servingStyle,
+    menu: order.menu,
+    additionalNote: order.additionalNote || '',
+    priority: order.priority,
+    status: order.status,
+    placedAt: order.createdAt,
+  }));
 };
 
 const getActiveOrders = async () => {
