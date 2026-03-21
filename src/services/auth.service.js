@@ -369,6 +369,7 @@ const login = async ({ email, phoneNumber, password }) => {
   await authUser.save();
 
   const token = issueAccessToken(authUser);
+  const hasProfileId = Boolean(authUser.profileId);
 
   return {
     token,
@@ -378,7 +379,8 @@ const login = async ({ email, phoneNumber, password }) => {
       email: authUser.email,
       phoneNumber: authUser.phoneNumber,
       role: authUser.role,
-      profileId: authUser.profileId,
+      profileId: authUser.role === 'halwai' ? hasProfileId : authUser.profileId,
+      hasProfileId,
       profileModel: authUser.profileModel,
       picture: authUser.picture,
     },
