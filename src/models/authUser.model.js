@@ -4,17 +4,24 @@ const authUserSchema = new mongoose.Schema(
   {
     googleId: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       trim: true,
       index: true,
     },
     email: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       trim: true,
       lowercase: true,
+      index: true,
+    },
+    phoneNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
       index: true,
     },
     name: {
@@ -26,6 +33,11 @@ const authUserSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: '',
+    },
+    password: {
+      type: String,
+      default: null,
+      select: false,
     },
     role: {
       type: String,

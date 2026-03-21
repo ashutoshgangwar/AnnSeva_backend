@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const bcryptjs = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
 const env = require('../config/env');
 const AuthUser = require('../models/authUser.model');
@@ -216,9 +217,179 @@ const attachHalwaiProfileToAuthUser = async (userId, halwaiId) => {
   return authUser;
 };
 
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePhoneNumber = (phoneNumber) => {
+  const phoneRegex = /^[0-9]{10}$/;
+  return phoneRegex.test(phoneNumber.replace(/\D/g, ''));
+};
+
+const signup = async ({ email, phoneNumber, password, role, name }) => {
+  assertDatabaseConnected();
+  assertJwtConfigured();
+
+  if ((!email && !phoneNumber) || !password || !role || !name) {
+    const error = new Error('Email or phone number, password, role, and name are required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!['customer', 'halwai'].includes(role)) {
+    const error = new Error('Role must be either customer or halwai.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let trimmedEmail = null;
+  let trimmedPhone = null;
+
+  if (email) {
+    trimmedEmail = String(email).toLowerCase().trim();
+    if (!validateEmail(trimmedEmail)) {
+      const error = new Error('Please provide a valid email address.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  if (phoneNumber) {
+    trimmedPhone = String(phoneNumber).replace(/\D/g, '').trim();
+    if (!validatePhoneNumber(trimmedPhone)) {
+      const error = new Error('Please provide a valid 10-digit phone number.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  if (password.length < 6) {
+    const error = new Error('Password must be at least 6 characters long.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const query = {};
+  if (trimmedEmail) query.email = trimmedEmail;
+  if (trimmedPhone) query.phoneNumber = trimmedPhone;
+
+  const existingUser = await AuthUser.findOne({ $or: Object.keys(query).map(key => ({ [key]: query[key] })) });
+
+  if (existingUser) {
+    const error = new Error(
+      `You are already registered as ${existingUser.role}.`
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const hashedPassword = await bcryptjs.hash(password, 10);
+
+  const authUser = await AuthUser.create({
+    email: trimmedEmail,
+    phoneNumber: trimmedPhone,
+    password: hashedPassword,
+    name: String(name).trim(),
+    role,
+    lastLoginAt: new Date(),
+  });
+
+  const token = issueAccessToken(authUser);
+
+  return {
+    token,
+    user: toAuthResponseUser(authUser),
+  };
+};
+
+const login = async ({ email, phoneNumber, password }) => {
+  assertDatabaseConnected();
+  assertJwtConfigured();
+
+  if ((!email && !phoneNumber) || !password) {
+    const error = new Error('Email or phone number and password are required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (email && phoneNumber) {
+    const error = new Error('Please provide either email or phone number, not both.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let query = {};
+
+  if (email) {
+    const trimmedEmail = String(email).toLowerCase().trim();
+    if (!validateEmail(trimmedEmail)) {
+      const error = new Error('Please provide a valid email address.');
+      error.statusCode = 400;
+      throw error;
+    }
+    query = { email: trimmedEmail };
+  }
+
+  if (phoneNumber) {
+    const trimmedPhone = String(phoneNumber).replace(/\D/g, '').trim();
+    if (!validatePhoneNumber(trimmedPhone)) {
+      const error = new Error('Please provide a valid 10-digit phone number.');
+      error.statusCode = 400;
+      throw error;
+    }
+    query = { phoneNumber: trimmedPhone };
+  }
+
+  const authUser = await AuthUser.findOne(query).select('+password');
+
+  if (!authUser) {
+    const error = new Error('Invalid email/phone number or password.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  if (!authUser.password) {
+    const error = new Error(
+      'This account was created with Google Sign-In. Please login with Google.'
+    );
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const isPasswordValid = await bcryptjs.compare(password, authUser.password);
+
+  if (!isPasswordValid) {
+    const error = new Error('Invalid email/phone number or password.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  authUser.lastLoginAt = new Date();
+  await authUser.save();
+
+  const token = issueAccessToken(authUser);
+
+  return {
+    token,
+    user: {
+      userId: authUser._id,
+      name: authUser.name,
+      email: authUser.email,
+      phoneNumber: authUser.phoneNumber,
+      role: authUser.role,
+      profileId: authUser.profileId,
+      profileModel: authUser.profileModel,
+      picture: authUser.picture,
+    },
+  };
+};
+
 module.exports = {
   loginWithGoogle,
   getAuthUserById,
   linkAuthProfile,
   attachHalwaiProfileToAuthUser,
+  signup,
+  login,
 };

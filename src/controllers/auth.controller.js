@@ -3,6 +3,8 @@ const {
   loginWithGoogle,
   getAuthUserById,
   linkAuthProfile,
+  signup,
+  login,
 } = require('../services/auth.service');
 
 const loginGoogle = asyncHandler(async (req, res) => {
@@ -54,8 +56,32 @@ const linkMyProfile = asyncHandler(async (req, res) => {
   });
 });
 
+const signupUser = asyncHandler(async (req, res) => {
+  const { email, phoneNumber, password, role, name } = req.body;
+  const result = await signup({ email, phoneNumber, password, role, name });
+
+  res.status(201).json({
+    success: true,
+    message: 'Account created successfully.',
+    data: result,
+  });
+});
+
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, phoneNumber, password } = req.body;
+  const result = await login({ email, phoneNumber, password });
+
+  res.status(200).json({
+    success: true,
+    message: 'Login successful.',
+    data: result,
+  });
+});
+
 module.exports = {
   loginGoogle,
   getMe,
   linkMyProfile,
+  signupUser,
+  loginUser,
 };
