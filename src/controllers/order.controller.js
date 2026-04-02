@@ -168,7 +168,15 @@ const decideIncomingOrder = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const order = await respondToOrder(orderId, req.body);
+  const halwaiId = req.user?.profileId || req.user?.userId;
+
+  if (!halwaiId) {
+    const error = new Error('Halwai profile not linked to this account. Please complete your profile setup.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const order = await respondToOrder(orderId, { ...req.body, halwaiId });
 
   if (!order) {
     const error = new Error('Order not found.');

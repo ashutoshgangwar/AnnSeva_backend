@@ -224,19 +224,8 @@ const validateOrderDecision = (req, res, next) => {
     );
   }
 
-  const halwaiId = sanitizeString(req.body.halwaiId);
-
-  if (!halwaiId) {
-    return next(createValidationError('Halwai id is required.'));
-  }
-
-  if (!mongoose.isValidObjectId(halwaiId)) {
-    return next(createValidationError('Halwai id must be a valid MongoDB ObjectId.'));
-  }
-
   req.body = {
     decision: normalizedDecision,
-    halwaiId,
   };
 
   return next();
